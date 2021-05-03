@@ -65,9 +65,18 @@ type tunnelError struct {
 }
 
 func NewSupervisor(config *TunnelConfig, reconnectCh chan ReconnectSignal, gracefulShutdownC <-chan struct{}) (*Supervisor, error) {
-	cloudflaredUUID, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate cloudflared instance ID: %w", err)
+	var err error
+	var cloudflaredUUID uuid.UUID
+	if config.UUID != "" {
+		cloudflaredUUID, err = uuid.Parse(config.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse cloudflared instance ID: %s", config.UUID)
+		}
+	} else {
+		cloudflaredUUID, err = uuid.NewRandom()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate cloudflared instance ID: %w", err)
+		}
 	}
 
 	var edgeIPs *edgediscovery.Edge

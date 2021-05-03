@@ -666,6 +666,13 @@ func configureCloudflaredFlags(shouldHide bool) []cli.Flag {
 func configureProxyFlags(shouldHide bool) []cli.Flag {
 	flags := []cli.Flag{
 		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:    "uuid",
+			Value:   "",
+			Usage:   "provide for reusing trycloudflare host",
+			EnvVars: []string{"TUNNEL_UUID"},
+			Hidden:  shouldHide,
+		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:    "url",
 			Value:   "http://localhost:8080",
 			Usage:   "Connect to the local webserver at `URL`.",

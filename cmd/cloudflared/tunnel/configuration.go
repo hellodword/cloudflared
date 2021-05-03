@@ -297,6 +297,7 @@ func prepareTunnelConfig(
 		MuxerConfig:      muxerConfig,
 		ProtocolSelector: protocolSelector,
 		EdgeTLSConfigs:   edgeTLSConfigs,
+		UUID:             c.String("uuid"),
 	}, ingressRules, nil
 }
 
