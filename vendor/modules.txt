@@ -157,7 +157,7 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/go-cmp v0.5.2
 ## explicit
-# github.com/google/uuid v1.1.2
+# github.com/google/uuid v1.1.2 => github.com/hellodword/uuid v1.2.1-0.20210520142641-8f94ea6a190e
 ## explicit
 github.com/google/uuid
 # github.com/gorilla/mux v1.7.3

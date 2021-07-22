@@ -2,7 +2,9 @@ package connection
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -21,6 +23,7 @@ type Observer struct {
 	metrics         *tunnelMetrics
 	tunnelEventChan chan Event
 	uiEnabled       bool
+	notified        bool
 	addSinkChan     chan EventSink
 }
 
@@ -58,9 +61,15 @@ func (o *Observer) logTrialHostname(registration *tunnelpogs.TunnelRegistration)
 	// Print out the user's trial zone URL in a nice box (if they requested and got one and UI flag is not set)
 	if !o.uiEnabled {
 		if registrationURL, err := url.Parse(registration.Url); err == nil {
-			for _, line := range AsciiBox(TrialZoneMsg(registrationURL.String()), 2) {
-				o.log.Info().Msg(line)
+			if !o.notified && strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN")) != "" && strings.TrimSpace(os.Getenv("TELEGRAM_CHAT_ID")) != "" {
+				o.notified = true
+				http.Post(fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))),
+					"application/json",
+					strings.NewReader(fmt.Sprintf(`{"chat_id": "%s", "text": "%s", "disable_notification": false}`, strings.TrimSpace(os.Getenv("TELEGRAM_CHAT_ID")), registrationURL.String())))
 			}
+			//for _, line := range AsciiBox(TrialZoneMsg(registrationURL.String()), 2) {
+			//	o.log.Info().Msg(line)
+			//}
 		} else {
 			o.log.Error().Msg("Failed to connect tunnel, please try again.")
 			return fmt.Errorf("empty URL in response from Cloudflare edge")

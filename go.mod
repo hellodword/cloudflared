@@ -62,3 +62,4 @@ require (
 )
 
 replace github.com/urfave/cli/v2 => github.com/ipostelnik/cli/v2 v2.3.1-0.20210324024421-b6ea8234fe3d
+replace github.com/google/uuid v1.1.2 => github.com/hellodword/uuid v1.2.1-0.20210520142641-8f94ea6a190e

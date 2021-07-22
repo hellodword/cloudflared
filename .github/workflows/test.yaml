@@ -1,0 +1,86 @@
+name: Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      MINUTES:
+        description: "minutes"
+        required: false
+        default: '60'
+
+jobs:
+  run:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.6 #  unexpected call to os.Exit(0) during test
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: 'reuse'
+      - name: Checkout v
+        uses: actions/checkout@v2
+        with:
+          repository: 'XTLS/Xray-core'
+          ref: 'v1.4.2'
+          path: 'v2ray-core'
+
+      - name: wg
+        run: |
+          export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
+          sudo apt update
+          sudo apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
+          wget -q https://github.com/ViRb3/wgcf/releases/download/v2.2.5/wgcf_2.2.5_linux_amd64
+          mv wgcf* wgcf
+          file wgcf
+          sudo mkdir -p /usr/local/bin
+          sudo cp wgcf /usr/local/bin/wgcf
+          file /usr/local/bin/wgcf
+          sudo chmod +x /usr/local/bin/wgcf
+          echo | sudo wgcf register
+          until [ $? -eq 0 ]
+          do
+          sleep 1s
+          echo | sudo wgcf register
+          done
+          sudo wgcf generate
+          sudo sed -i "5 s/^/PostUp = ip rule add from $rv4 lookup main\n/" wgcf-profile.conf
+          sudo sed -i "6 s/^/PostDown = ip rule delete from $rv4 lookup main\n/" wgcf-profile.conf
+          sudo sed -i 's/engage.cloudflareclient.com/162.159.192.1/g' wgcf-profile.conf
+          sudo sed -i '/\:\:\/0/d' wgcf-profile.conf
+          sudo sed -i 's/1.1.1.1/8.8.8.8/g' wgcf-profile.conf
+          sudo cp wgcf-account.toml /etc/wireguard/wgcf-account.toml
+          sudo cp wgcf-profile.conf /etc/wireguard/wgcf.conf
+          sudo systemctl enable wg-quick@wgcf
+          sudo systemctl start wg-quick@wgcf || systemctl status wg-quick@wgcf.service
+          sudo rm -f wgcf*
+
+      - name: config
+        run: |
+          # echo "${{ secrets.____C____ONFIG }}">config.json
+          sed -i "s/CONFIG_UUID/${{ secrets.CONFIG_UUID }}/g" config.json
+          # export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
+          # sed -i "s/0\.0\.0\.0/$rv4/g" config.json
+
+      - name: go test
+        run: |
+          cd v2ray-core
+          go run ./main -c ../config.json &
+          # go build -o v2ray ./main
+          # chmod a+x v2ray
+          # ./v2ray -c ../config.json &
+          # sleep 3
+          # curl -s -x socks5://127.0.0.1:1080 ip.gs
+          # curl -s -x socks5://127.0.0.1:1080 https://ip.gs
+          cd ..
+          go mod vendor
+          cd ./cmd/cloudflared
+          go test -test.timeout 0 -test.run TestHello -args tunnel --url http://127.0.0.1:8000 --loglevel fatal
+        env:
+          TUNNEL_UUID: "${{ secrets.TUNNEL_UUID }}"
+          MINUTES: "${{ github.event.inputs.MINUTES }}"
+          TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          TELEGRAM_CHAT_ID: "${{ secrets.TELEGRAM_CHAT_ID }}"
+
