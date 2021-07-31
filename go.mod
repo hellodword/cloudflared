@@ -37,6 +37,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.13.0 // indirect
 	github.com/rivo/tview v0.0.0-20200712113419-c65badfc3d92
 	github.com/rs/zerolog v1.20.0
@@ -62,3 +63,4 @@ require (
 )
 
 replace github.com/urfave/cli/v2 => github.com/ipostelnik/cli/v2 v2.3.1-0.20210324024421-b6ea8234fe3d
+replace github.com/google/uuid v1.1.2 => github.com/hellodword/uuid v1.2.1-0.20210520142641-8f94ea6a190e

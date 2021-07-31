@@ -94,7 +94,7 @@ func maxLen(lines []string) int {
 	return max
 }
 
-func TrialZoneMsg(url string) []string {
+func TrialZoneMsg2(url string) []string {
 	return []string{
 		"Your free tunnel has started! Visit it:",
 		"  " + url,
