@@ -3,6 +3,7 @@ package tunnel
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cloudflare/cloudflared/notify"
 	"net/http"
 	"strings"
 	"time"
@@ -59,10 +60,10 @@ func RunQuickTunnel(sc *subcommandContext) error {
 	}
 
 	url := data.Result.Hostname
+	notify.Notify(url)
 	if !strings.HasPrefix(url, "https://") {
 		url = "https://" + url
 	}
-
 	for _, line := range AsciiBox([]string{
 		"Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):",
 		url,
