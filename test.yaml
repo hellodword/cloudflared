@@ -1,0 +1,6 @@
+ingress:
+  - service: socks-proxy
+    originRequest:
+      ipRules:
+        - prefix: 0.0.0.0/0
+          allow: true
