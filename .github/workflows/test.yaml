@@ -1,0 +1,94 @@
+name: Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      MINUTES:
+        description: "minutes"
+        required: false
+        default: '60'
+
+jobs:
+  run:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.5
+      - name: Checkout codebase
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Checkout v2ray
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          repository: 'v2fly/v2ray-core'
+          ref: 'v4.44.0'
+          path: 'v2ray-core'
+      - name: Check Go Modules of v2ray
+        run: |
+          cd v2ray-core
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+          go mod verify
+      - name: Run testing of v2ray
+        run: |
+          cd v2ray-core/common/uuid
+          go test
+      - name: wg
+        run: |
+          export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
+          sudo apt update
+          sudo apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
+          wget -q https://github.com/ViRb3/wgcf/releases/download/v2.2.11/wgcf_2.2.11_linux_amd64
+          mv wgcf* wgcf
+          file wgcf
+          sudo mkdir -p /usr/local/bin
+          sudo cp wgcf /usr/local/bin/wgcf
+          file /usr/local/bin/wgcf
+          sudo chmod +x /usr/local/bin/wgcf
+          echo | sudo wgcf register
+          until [ $? -eq 0 ]
+          do
+          sleep 1s
+          echo | sudo wgcf register
+          done
+          sudo wgcf generate
+          sudo sed -i "5 s/^/PostUp = ip rule add from $rv4 lookup main\n/" wgcf-profile.conf
+          sudo sed -i "6 s/^/PostDown = ip rule delete from $rv4 lookup main\n/" wgcf-profile.conf
+          sudo sed -i 's/engage.cloudflareclient.com/162.159.192.1/g' wgcf-profile.conf
+          sudo sed -i '/\:\:\/0/d' wgcf-profile.conf
+          sudo sed -i 's/1.1.1.1/8.8.8.8/g' wgcf-profile.conf
+          sudo cp wgcf-account.toml /etc/wireguard/wgcf-account.toml
+          sudo cp wgcf-profile.conf /etc/wireguard/wgcf.conf
+          sudo systemctl enable wg-quick@wgcf
+          sudo systemctl start wg-quick@wgcf || systemctl status wg-quick@wgcf.service
+          sudo rm -f wgcf*
+      - name: config
+        run: |
+          sed -i "s/CONFIG_UUID/${{ secrets.CONFIG_UUID }}/g" config.json
+          export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
+          sed -i "s/0\.0\.0\.0/$rv4/g" config.json
+      - name: install nginx
+        run: |
+          sudo apt install nginx -y
+          sudo mv nginx.conf /etc/nginx/nginx.conf
+          sudo service nginx restart
+      - name: nginx testing
+        run: |
+          sudo nginx -t
+      - name: go test
+        run: |
+          cd v2ray-core
+          go run ./main -c ../config.json &
+          cd ..
+          go mod vendor
+          cd ./cmd/cloudflared
+          go test -test.timeout 0 -test.run TestHello -args tunnel --url http://localhost:8000 --loglevel fatal
+        env:
+          V2RAY_VMESS_AEAD_FORCED: "false"
+          MINUTES: "${{ github.event.inputs.MINUTES }}"
+          TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          TELEGRAM_CHAT_ID: "${{ secrets.TELEGRAM_CHAT_ID }}"
