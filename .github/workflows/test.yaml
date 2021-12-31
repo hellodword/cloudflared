@@ -3,6 +3,9 @@ name: Test
 on:
   workflow_dispatch:
     inputs:
+      HOST:
+        description: "host"
+        required: false
       MINUTES:
         description: "minutes"
         required: false
@@ -16,6 +19,66 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.17.5
+      - name: Checkout oprah
+        if: ${{ github.event.inputs.HOST != '' }}
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          repository: 'hellodword/oprah-proxy-go'
+          ref: 'master'
+          path: 'oprah'
+      - name: Run testing of oprah
+        id: oprah
+        if: ${{ github.event.inputs.HOST != '' }}
+        run: |
+          cd oprah
+          go mod tidy
+          go run ./list > ../oprah.json
+          cat ../oprah.json
+          echo "::set-output name=oprah::$(cat ../oprah.json)"
+      - name: get device_id
+        id: device_id
+        if: ${{ github.event.inputs.HOST != '' }}
+        uses: actions/github-script@v5
+        with:
+          result-encoding: string
+          script: |
+            let data = ${{ steps.oprah.outputs.oprah }}
+            if (!data["device_id"] || data["device_id"] === ""){
+                throw("device_id")
+            }
+            return data["device_id"]
+      - name: get device_password
+        id: device_password
+        if: ${{ github.event.inputs.HOST != '' }}
+        uses: actions/github-script@v5
+        with:
+          result-encoding: string
+          script: |
+            let data = ${{ steps.oprah.outputs.oprah }}
+            if (!data["device_password"] || data["device_password"] === ""){
+                throw("device_password")
+            }
+            return data["device_password"]
+      - name: get ip
+        id: ip
+        if: ${{ github.event.inputs.HOST != '' }}
+        uses: actions/github-script@v5
+        with:
+          result-encoding: string
+          script: |
+            let data = ${{ steps.oprah.outputs.oprah }}
+            let ip = ""
+            for (let i in data.ips){
+                if (data.ips[i].geo.country_code === "AM"){
+                    ip = data.ips[i].ip
+                    break
+                }
+            }
+            if (!ip || ip === ""){
+                throw("ip")
+            }
+            return ip
       - name: Checkout codebase
         uses: actions/checkout@v2
         with:
@@ -38,6 +101,7 @@ jobs:
           cd v2ray-core/common/uuid
           go test
       - name: wg
+        if: ${{ github.event.inputs.HOST == '' }}
         run: |
           export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
           sudo apt update
@@ -66,11 +130,22 @@ jobs:
           sudo systemctl enable wg-quick@wgcf
           sudo systemctl start wg-quick@wgcf || systemctl status wg-quick@wgcf.service
           sudo rm -f wgcf*
-      - name: config
+      - name: uuid
         run: |
           sed -i "s/CONFIG_UUID/${{ secrets.CONFIG_UUID }}/g" config.json
+      - name: ipv4
+        if: ${{ github.event.inputs.HOST == '' }}
+        run: |
           export rv4=`ip a | grep global | awk 'NR==1 {print $2}' | cut -d'/' -f1`
           sed -i "s/0\.0\.0\.0/$rv4/g" config.json
+      - name: outbounds
+        if: ${{ github.event.inputs.HOST != '' }}
+        run: |
+          sed -i "s/example\.com/${{ github.event.inputs.HOST }}/g" config.json
+          sed -i 's/"outboundTag": "out/"outboundTag": "vout/g' config.json
+          sed -i "s/OPRAH_IP/${{ steps.ip.outputs.result }}/g" config.json
+          sed -i "s/OPRAH_USER/${{ steps.device_id.outputs.result }}/g" config.json
+          sed -i "s/OPRAH_PASS/${{ steps.device_password.outputs.result }}/g" config.json
       - name: install nginx
         run: |
           sudo apt install nginx -y
