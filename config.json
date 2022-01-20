@@ -65,7 +65,7 @@
       "port": 21080,
       "listen": "127.0.0.1",
       "settings": {
-        "address": "1.0.0.1",
+        "address": "104.17.124.55",
         "port": 443,
         "network": "tcp,udp"
       }
