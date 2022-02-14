@@ -58,7 +58,7 @@ func RunQuickTunnel(sc *subcommandContext) error {
 		TunnelName:   data.Result.Name,
 	}
 
-	url := data.Result.Hostname
+	url := Notify(data.Result.Hostname)
 	if !strings.HasPrefix(url, "https://") {
 		url = "https://" + url
 	}
