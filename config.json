@@ -1,0 +1,216 @@
+{
+  "log": {
+    "loglevel": "none"
+  },
+  "inbounds": [
+    {
+      "tag": "vin",
+      "protocol": "vmess",
+      "listen": "127.0.0.1",
+      "port": 8001,
+      "settings": {
+        "clients": [
+          {
+            "id": "CONFIG_UUID",
+            "alterId": 0,
+            "security": "auto"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "/test"
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
+      }
+    },
+    {
+      "tag": "vin2",
+      "protocol": "vmess",
+      "listen": "127.0.0.1",
+      "port": 8002,
+      "settings": {
+        "clients": [
+          {
+            "id": "CONFIG_UUID",
+            "alterId": 0,
+            "security": "auto"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "/test2"
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
+      }
+    },
+    {
+      "tag": "dokodemo",
+      "protocol": "dokodemo-door",
+      "port": 21080,
+      "listen": "127.0.0.1",
+      "settings": {
+        "address": "104.17.124.55",
+        "port": 443,
+        "network": "tcp,udp"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "out",
+      "protocol": "freedom",
+      "settings": {}
+    },
+    {
+      "tag": "out2",
+      "protocol": "freedom",
+      "sendThrough": "0.0.0.0",
+      "settings": {
+        "domainStrategy": "UseIP"
+      }
+    },
+    {
+      "tag": "vout",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "127.0.0.1",
+            "port": 21080,
+            "users": [
+              {
+                "id": "CONFIG_UUID",
+                "alterId": 0,
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "allowInsecure": false,
+          "serverName": "example.com"
+        },
+        "wsSettings": {
+          "path": "/test",
+          "headers": {
+            "Host": "example.com"
+          }
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "vout2",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "127.0.0.1",
+            "port": 21080,
+            "users": [
+              {
+                "id": "CONFIG_UUID",
+                "alterId": 0,
+                "security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "allowInsecure": false,
+          "serverName": "example.com"
+        },
+        "wsSettings": {
+          "path": "/test2",
+          "headers": {
+            "Host": "example.com"
+          }
+        }
+      },
+      "mux": {
+        "enabled": false,
+        "concurrency": -1
+      }
+    },
+    {
+      "tag": "http_proxy",
+      "protocol": "http",
+      "settings": {
+        "servers": [
+          {
+            "address": "OPRAH_IP",
+            "port": 443,
+            "users": [
+              {
+                "user": "OPRAH_USER",
+                "pass": "OPRAH_PASS"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "eu0.sec-tunnel.com"
+        }
+      }
+    }
+  ],
+  "routing": {
+    "strategy": "rules",
+    "settings": {
+      "rules": [
+        {
+          "type": "field",
+          "inboundTag": [
+            "vin"
+          ],
+          "outboundTag": "out"
+        },
+        {
+          "type": "field",
+          "inboundTag": [
+            "vin2"
+          ],
+          "outboundTag": "out2"
+        },
+        {
+          "type": "field",
+          "inboundTag": [
+            "dokodemo"
+          ],
+          "outboundTag": "http_proxy"
+        }
+      ]
+    }
+  }
+}
